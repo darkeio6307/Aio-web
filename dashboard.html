@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -383,7 +382,7 @@ html, body {
 // ═══════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════
-const API_BASE = ''; // Same origin
+const API_BASE = 'https://instasaver-pro-v4.onrender.com/'; // ← CHANGE THIS to your bot server URL
 let tgUser = null;
 let userId = null;
 let isAdmin = false;
@@ -394,6 +393,10 @@ let trendChartInst = null;
 // TELEGRAM WEBAPP INIT
 // ═══════════════════════════════════════
 function initTelegram() {
+  // Always try URL param first (works for both WebApp and direct link)
+  const params = new URLSearchParams(window.location.search);
+  const urlUid = params.get('user_id');
+
   if (window.Telegram && Telegram.WebApp) {
     const tg = Telegram.WebApp;
     tg.ready();
@@ -408,28 +411,17 @@ function initTelegram() {
       userId = user.id;
       renderUser(user);
       fetchAllData(user.id);
-    } else {
-      // Fallback: try URL param
-      const params = new URLSearchParams(window.location.search);
-      const uid = params.get('user_id');
-      if (uid) {
-        userId = parseInt(uid);
-        renderUser({ first_name: 'User', username: 'user', id: userId, photo_url: '' });
-        fetchAllData(userId);
-      } else {
-        showError('Open this dashboard from Telegram Web App or add ?user_id=YOUR_ID to URL');
-      }
+      return;
     }
+  }
+
+  // Fallback to URL param
+  if (urlUid) {
+    userId = parseInt(urlUid);
+    renderUser({ first_name: 'User', username: 'user', id: userId, photo_url: '' });
+    fetchAllData(userId);
   } else {
-    const params = new URLSearchParams(window.location.search);
-    const uid = params.get('user_id');
-    if (uid) {
-      userId = parseInt(uid);
-      renderUser({ first_name: 'User', username: 'user', id: userId, photo_url: '' });
-      fetchAllData(userId);
-    } else {
-      showError('Open this dashboard from Telegram or add ?user_id=YOUR_ID');
-    }
+    showError('Open this dashboard from Telegram Web App or add ?user_id=YOUR_ID to URL');
   }
 }
 
@@ -457,19 +449,34 @@ function renderUser(user) {
 // API CALLS
 // ═══════════════════════════════════════
 async function apiGet(path) {
-  const res = await fetch(API_BASE + path);
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  return res.json();
+  const url = API_BASE + path;
+  try {
+    const res = await fetch(url, { method: 'GET', mode: 'cors' });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error('HTTP ' + res.status + ': ' + txt);
+    }
+    return res.json();
+  } catch (e) {
+    console.error('API fetch failed:', url, e);
+    throw e;
+  }
 }
 
 async function fetchAllData(uid) {
   try {
     const [me, history, dash, health] = await Promise.all([
-      apiGet('/api/me?user_id=' + uid).catch(() => ({})),
-      apiGet('/api/history?user_id=' + uid + '&page=0').catch(() => ({ items: [] })),
-      apiGet('/api/dashboard').catch(() => ({})),
-      apiGet('/api/health').catch(() => ({ status: 'unknown' }))
+      apiGet('/api/me?user_id=' + uid).catch(e => { console.error('/api/me error:', e); return {}; }),
+      apiGet('/api/history?user_id=' + uid + '&page=0').catch(e => { console.error('/api/history error:', e); return { items: [] }; }),
+      apiGet('/api/dashboard').catch(e => { console.error('/api/dashboard error:', e); return {}; }),
+      apiGet('/api/health').catch(e => { console.error('/api/health error:', e); return { status: 'unknown' }; })
     ]);
+
+    // Check if me data is empty (API failed)
+    if (!me || Object.keys(me).length === 0 || me.error) {
+      showError('Cannot connect to bot server.<br><br>Make sure:<br>1. API_BASE is set to your bot URL<br>2. Bot server is running<br>3. CORS is enabled on bot server<br><br>Current API_BASE: <code>' + API_BASE + '</code>');
+      return;
+    }
 
     renderStats(me);
     renderRecent(history.items || []);
@@ -478,12 +485,17 @@ async function fetchAllData(uid) {
 
     if (me.is_admin) {
       isAdmin = true;
-      document.getElementById('userBadge').className = 'badge vip';
-      document.getElementById('userBadge').innerHTML = '<i class="fas fa-crown"></i> VIP Admin';
+      const badge = document.getElementById('userBadge');
+      badge.className = 'badge vip';
+      badge.innerHTML = '<i class="fas fa-crown"></i> VIP Admin';
+    } else if (me.plan === 'VIP') {
+      const badge = document.getElementById('userBadge');
+      badge.className = 'badge vip';
+      badge.innerHTML = '<i class="fas fa-gem"></i> VIP';
     }
   } catch (e) {
     console.error(e);
-    showError('Failed to load dashboard data. Make sure the bot server is running.');
+    showError('Failed to load dashboard data.<br><br>Error: <code>' + escapeHtml(e.message) + '</code><br><br>API_BASE: <code>' + API_BASE + '</code>');
   }
 }
 
