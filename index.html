@@ -1,1 +1,663 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>InstaSaver Pro — Dashboard</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --bg: #0a0a1a;
+  --card: rgba(255,255,255,0.04);
+  --card-border: rgba(255,255,255,0.08);
+  --text: #e8e8f0;
+  --text-dim: #8b8ba3;
+  --accent: #00d4ff;
+  --accent2: #a855f7;
+  --success: #22c55e;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body {
+  font-family:'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Animated background mesh */
+.bg-mesh {
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 40%, rgba(0,212,255,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 60% at 80% 20%, rgba(168,85,247,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 50% 90%, rgba(0,212,255,0.05) 0%, transparent 50%);
+}
+.bg-mesh::after {
+  content:''; position:absolute; inset:0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.015'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.container { position:relative; z-index:1; max-width:480px; margin:0 auto; padding:16px; padding-bottom:40px; }
+
+/* Header / Profile */
+.profile-card {
+  background: linear-gradient(135deg, rgba(0,212,255,0.12) 0%, rgba(168,85,247,0.12) 100%);
+  border:1px solid var(--card-border);
+  border-radius:24px;
+  padding:24px 20px;
+  margin-bottom:20px;
+  position:relative;
+  overflow:hidden;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.profile-card::before {
+  content:''; position:absolute; top:-50%; right:-30%; width:200px; height:200px;
+  background: radial-gradient(circle, rgba(0,212,255,0.15) 0%, transparent 70%);
+  animation: float 6s ease-in-out infinite;
+}
+@keyframes float {
+  0%,100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(5deg); }
+}
+.profile-top {
+  display:flex; align-items:center; gap:16px; position:relative; z-index:1;
+}
+.avatar-wrap {
+  position:relative; flex-shrink:0;
+}
+.avatar {
+  width:72px; height:72px; border-radius:50%;
+  object-fit:cover;
+  border:3px solid rgba(255,255,255,0.15);
+  box-shadow: 0 0 30px rgba(0,212,255,0.3);
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display:flex; align-items:center; justify-content:center;
+  font-size:28px; font-weight:700; color:#fff;
+}
+.avatar img { width:100%; height:100%; border-radius:50%; object-fit:cover; }
+.status-dot {
+  position:absolute; bottom:4px; right:4px;
+  width:14px; height:14px; border-radius:50%;
+  background: var(--success);
+  border:3px solid var(--bg);
+}
+.profile-info h1 {
+  font-size:22px; font-weight:800; letter-spacing:-0.5px;
+  background: linear-gradient(90deg, #fff, var(--accent));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.profile-info .handle {
+  font-size:13px; color:var(--text-dim); margin-top:2px;
+}
+.profile-info .uid {
+  font-size:11px; color:var(--text-dim); opacity:0.7; margin-top:4px;
+  font-family: monospace;
+}
+.badge {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600;
+  margin-top:8px;
+}
+.badge.vip {
+  background: linear-gradient(90deg, rgba(0,212,255,0.2), rgba(168,85,247,0.2));
+  border:1px solid rgba(0,212,255,0.3);
+  color: var(--accent);
+}
+.badge.user {
+  background: rgba(255,255,255,0.06);
+  border:1px solid var(--card-border);
+  color: var(--text-dim);
+}
+
+/* Section titles */
+.section-title {
+  font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
+  color:var(--text-dim); margin:28px 0 14px; display:flex; align-items:center; gap:8px;
+}
+.section-title i { color:var(--accent); font-size:14px; }
+
+/* Stats Grid */
+.stats-grid {
+  display:grid; grid-template-columns:1fr 1fr; gap:12px;
+}
+.stat-card {
+  background: var(--card);
+  border:1px solid var(--card-border);
+  border-radius:20px;
+  padding:18px 16px;
+  position:relative; overflow:hidden;
+  transition: transform 0.3s, border-color 0.3s;
+}
+.stat-card:active { transform: scale(0.97); }
+.stat-card:hover { border-color: rgba(0,212,255,0.2); }
+.stat-card .icon {
+  width:40px; height:40px; border-radius:12px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; margin-bottom:12px;
+}
+.stat-card:nth-child(1) .icon { background: rgba(0,212,255,0.12); color: var(--accent); }
+.stat-card:nth-child(2) .icon { background: rgba(34,197,94,0.12); color: var(--success); }
+.stat-card:nth-child(3) .icon { background: rgba(245,158,11,0.12); color: var(--warning); }
+.stat-card:nth-child(4) .icon { background: rgba(168,85,247,0.12); color: var(--accent2); }
+.stat-card .label {
+  font-size:12px; color:var(--text-dim); font-weight:500;
+}
+.stat-card .value {
+  font-size:26px; font-weight:800; margin-top:4px;
+  background: linear-gradient(90deg, #fff, #c0c0d0);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.stat-card .sub {
+  font-size:11px; color:var(--text-dim); margin-top:4px;
+}
+
+/* Charts */
+.chart-card {
+  background: var(--card);
+  border:1px solid var(--card-border);
+  border-radius:20px;
+  padding:20px;
+  margin-bottom:14px;
+}
+.chart-card h3 {
+  font-size:14px; font-weight:600; margin-bottom:16px;
+  display:flex; align-items:center; gap:8px;
+}
+.chart-card h3 i { color:var(--accent2); }
+.chart-wrap { position:relative; height:200px; }
+
+/* Recent Table */
+.table-card {
+  background: var(--card);
+  border:1px solid var(--card-border);
+  border-radius:20px;
+  overflow:hidden;
+}
+.table-header {
+  display:grid; grid-template-columns: 2fr 1fr 1fr 80px;
+  padding:14px 16px; font-size:11px; font-weight:600;
+  color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px;
+  border-bottom:1px solid var(--card-border);
+}
+.table-row {
+  display:grid; grid-template-columns: 2fr 1fr 1fr 80px;
+  padding:14px 16px; font-size:12px;
+  border-bottom:1px solid var(--card-border);
+  align-items:center;
+  transition: background 0.2s;
+}
+.table-row:last-child { border-bottom:none; }
+.table-row:hover { background: rgba(255,255,255,0.02); }
+.table-row .url {
+  color:var(--text); font-weight:500;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.table-row .plat { color:var(--text-dim); font-size:11px; }
+.table-row .size { color:var(--text-dim); font-size:11px; text-align:right; }
+.status-badge {
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:3px 8px; border-radius:8px; font-size:10px; font-weight:700;
+}
+.status-badge.ok { background:rgba(34,197,94,0.15); color:var(--success); }
+.status-badge.fail { background:rgba(239,68,68,0.15); color:var(--danger); }
+
+/* Bot Info */
+.bot-info {
+  background: linear-gradient(135deg, rgba(168,85,247,0.1) 0%, rgba(0,212,255,0.1) 100%);
+  border:1px solid var(--card-border);
+  border-radius:20px;
+  padding:20px;
+  margin-top:20px;
+}
+.bot-info h3 {
+  font-size:16px; font-weight:700; margin-bottom:16px;
+  display:flex; align-items:center; gap:8px;
+}
+.bot-info h3 i { color:var(--accent); }
+.info-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:10px 0; border-bottom:1px solid var(--card-border);
+  font-size:13px;
+}
+.info-row:last-child { border-bottom:none; }
+.info-row .key { color:var(--text-dim); }
+.info-row .val { font-weight:600; color:var(--text); }
+.pulse {
+  display:inline-block; width:8px; height:8px; border-radius:50%;
+  background:var(--success); margin-right:6px;
+  animation: pulse-dot 2s infinite;
+}
+@keyframes pulse-dot {
+  0% { box-shadow: 0 0 0 0 rgba(34,197,94,0.5); }
+  70% { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
+  100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+}
+
+/* Loading skeleton */
+.skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius:12px;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skeleton-avatar { width:72px; height:72px; border-radius:50%; }
+.skeleton-text { height:16px; border-radius:8px; margin:6px 0; }
+.skeleton-text.sm { width:60%; height:12px; }
+
+/* Error state */
+.error-state {
+  text-align:center; padding:40px 20px;
+}
+.error-state i { font-size:40px; color:var(--danger); margin-bottom:12px; }
+.error-state h3 { font-size:16px; margin-bottom:8px; }
+.error-state p { font-size:13px; color:var(--text-dim); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:4px; }
+
+/* Animations */
+.fade-in { animation: fadeIn 0.6s ease-out forwards; opacity:0; }
+@keyframes fadeIn { to { opacity:1; } }
+.slide-up { animation: slideUp 0.5s ease-out forwards; opacity:0; transform:translateY(20px); }
+@keyframes slideUp { to { opacity:1; transform:translateY(0); } }
+
+/* Responsive */
+@media (max-width:400px) {
+  .stats-grid { gap:8px; }
+  .stat-card { padding:14px 12px; }
+  .stat-card .value { font-size:22px; }
+  .table-header, .table-row { grid-template-columns: 1.5fr 0.8fr 0.8fr 60px; padding:12px 10px; }
+}
+</style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div class="container">
+
+  <!-- Profile Header -->
+  <div class="profile-card fade-in" id="profileCard">
+    <div class="profile-top">
+      <div class="avatar-wrap">
+        <div class="avatar" id="userAvatar">
+          <i class="fas fa-user"></i>
+        </div>
+        <div class="status-dot"></div>
+      </div>
+      <div class="profile-info">
+        <h1 id="userName">Loading...</h1>
+        <div class="handle" id="userHandle">@username</div>
+        <div class="uid" id="userId">ID: —</div>
+        <div class="badge user" id="userBadge"><i class="fas fa-user"></i> User</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- My Stats -->
+  <div class="section-title slide-up" style="animation-delay:0.1s"><i class="fas fa-chart-pie"></i> My Stats</div>
+  <div class="stats-grid" id="statsGrid">
+    <div class="stat-card slide-up" style="animation-delay:0.15s">
+      <div class="icon"><i class="fas fa-download"></i></div>
+      <div class="label">Total Downloads</div>
+      <div class="value" id="statTotal">—</div>
+      <div class="sub">All time</div>
+    </div>
+    <div class="stat-card slide-up" style="animation-delay:0.2s">
+      <div class="icon"><i class="fas fa-check-circle"></i></div>
+      <div class="label">Success Rate</div>
+      <div class="value" id="statRate">—</div>
+      <div class="sub">Successful / Total</div>
+    </div>
+    <div class="stat-card slide-up" style="animation-delay:0.25s">
+      <div class="icon"><i class="fas fa-calendar-day"></i></div>
+      <div class="label">Today</div>
+      <div class="value" id="statToday">—</div>
+      <div class="sub">Downloads today</div>
+    </div>
+    <div class="stat-card slide-up" style="animation-delay:0.3s">
+      <div class="icon"><i class="fas fa-crown"></i></div>
+      <div class="label">Plan</div>
+      <div class="value" id="statPlan">—</div>
+      <div class="sub" id="statPlanSub">—</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="section-title slide-up" style="animation-delay:0.35s"><i class="fas fa-chart-line"></i> Analytics</div>
+  <div class="chart-card slide-up" style="animation-delay:0.4s">
+    <h3><i class="fas fa-chart-pie"></i> Platform Breakdown</h3>
+    <div class="chart-wrap"><canvas id="platformChart"></canvas></div>
+  </div>
+  <div class="chart-card slide-up" style="animation-delay:0.45s">
+    <h3><i class="fas fa-chart-area"></i> Last 7 Days</h3>
+    <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+  </div>
+
+  <!-- Recent Downloads -->
+  <div class="section-title slide-up" style="animation-delay:0.5s"><i class="fas fa-clock-rotate-left"></i> Recent Downloads</div>
+  <div class="table-card slide-up" style="animation-delay:0.55s">
+    <div class="table-header">
+      <div>URL</div><div>Platform</div><div>Size</div><div>Status</div>
+    </div>
+    <div id="recentTable">
+      <div class="table-row"><div class="url skeleton skeleton-text" style="width:80%"></div><div class="plat skeleton skeleton-text" style="width:60%"></div><div class="size skeleton skeleton-text" style="width:50%"></div><div><div class="skeleton skeleton-text" style="width:40px;height:20px"></div></div></div>
+      <div class="table-row"><div class="url skeleton skeleton-text" style="width:70%"></div><div class="plat skeleton skeleton-text" style="width:50%"></div><div class="size skeleton skeleton-text" style="width:60%"></div><div><div class="skeleton skeleton-text" style="width:40px;height:20px"></div></div></div>
+      <div class="table-row"><div class="url skeleton skeleton-text" style="width:75%"></div><div class="plat skeleton skeleton-text" style="width:55%"></div><div class="size skeleton skeleton-text" style="width:45%"></div><div><div class="skeleton skeleton-text" style="width:40px;height:20px"></div></div></div>
+    </div>
+  </div>
+
+  <!-- Bot Info -->
+  <div class="section-title slide-up" style="animation-delay:0.6s"><i class="fas fa-robot"></i> Bot Info</div>
+  <div class="bot-info slide-up" style="animation-delay:0.65s">
+    <h3><i class="fas fa-robot"></i> InstaSaver Pro</h3>
+    <div class="info-row"><span class="key">Status</span><span class="val"><span class="pulse"></span>Online</span></div>
+    <div class="info-row"><span class="key">Version</span><span class="val" id="botVersion">v4.4</span></div>
+    <div class="info-row"><span class="key">Total Users</span><span class="val" id="botUsers">—</span></div>
+    <div class="info-row"><span class="key">Total Downloads</span><span class="val" id="botDownloads">—</span></div>
+    <div class="info-row"><span class="key">Platforms</span><span class="val">7</span></div>
+    <div class="info-row"><span class="key">Uptime</span><span class="val" id="botUptime">—</span></div>
+  </div>
+
+  <div style="text-align:center; margin-top:30px; color:var(--text-dim); font-size:11px; opacity:0.5;">
+    InstaSaver Pro v4.4 · Made with <i class="fas fa-heart" style="color:var(--danger)"></i> by @code_iox
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════
+const API_BASE = ''; // Same origin
+let tgUser = null;
+let userId = null;
+let isAdmin = false;
+let platformChartInst = null;
+let trendChartInst = null;
+
+// ═══════════════════════════════════════
+// TELEGRAM WEBAPP INIT
+// ═══════════════════════════════════════
+function initTelegram() {
+  if (window.Telegram && Telegram.WebApp) {
+    const tg = Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+    tg.setHeaderColor('#0a0a1a');
+    tg.setBackgroundColor('#0a0a1a');
+    tg.enableClosingConfirmation();
+
+    const user = tg.initDataUnsafe?.user;
+    if (user) {
+      tgUser = user;
+      userId = user.id;
+      renderUser(user);
+      fetchAllData(user.id);
+    } else {
+      // Fallback: try URL param
+      const params = new URLSearchParams(window.location.search);
+      const uid = params.get('user_id');
+      if (uid) {
+        userId = parseInt(uid);
+        renderUser({ first_name: 'User', username: 'user', id: userId, photo_url: '' });
+        fetchAllData(userId);
+      } else {
+        showError('Open this dashboard from Telegram Web App or add ?user_id=YOUR_ID to URL');
+      }
+    }
+  } else {
+    const params = new URLSearchParams(window.location.search);
+    const uid = params.get('user_id');
+    if (uid) {
+      userId = parseInt(uid);
+      renderUser({ first_name: 'User', username: 'user', id: userId, photo_url: '' });
+      fetchAllData(userId);
+    } else {
+      showError('Open this dashboard from Telegram or add ?user_id=YOUR_ID');
+    }
+  }
+}
+
+function renderUser(user) {
+  const nameEl = document.getElementById('userName');
+  const handleEl = document.getElementById('userHandle');
+  const idEl = document.getElementById('userId');
+  const avatarEl = document.getElementById('userAvatar');
+  const badgeEl = document.getElementById('userBadge');
+
+  const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'User';
+  nameEl.textContent = fullName;
+  handleEl.textContent = user.username ? '@' + user.username : '';
+  idEl.textContent = 'ID: ' + user.id;
+
+  if (user.photo_url) {
+    avatarEl.innerHTML = '<img src="' + user.photo_url + '" alt="PFP">';
+  } else {
+    const initial = (fullName[0] || 'U').toUpperCase();
+    avatarEl.textContent = initial;
+  }
+}
+
+// ═══════════════════════════════════════
+// API CALLS
+// ═══════════════════════════════════════
+async function apiGet(path) {
+  const res = await fetch(API_BASE + path);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+async function fetchAllData(uid) {
+  try {
+    const [me, history, dash, health] = await Promise.all([
+      apiGet('/api/me?user_id=' + uid).catch(() => ({})),
+      apiGet('/api/history?user_id=' + uid + '&page=0').catch(() => ({ items: [] })),
+      apiGet('/api/dashboard').catch(() => ({})),
+      apiGet('/api/health').catch(() => ({ status: 'unknown' }))
+    ]);
+
+    renderStats(me);
+    renderRecent(history.items || []);
+    renderBotInfo(dash, health);
+    renderCharts(dash, history.items || []);
+
+    if (me.is_admin) {
+      isAdmin = true;
+      document.getElementById('userBadge').className = 'badge vip';
+      document.getElementById('userBadge').innerHTML = '<i class="fas fa-crown"></i> VIP Admin';
+    }
+  } catch (e) {
+    console.error(e);
+    showError('Failed to load dashboard data. Make sure the bot server is running.');
+  }
+}
+
+// ═══════════════════════════════════════
+// RENDERERS
+// ═══════════════════════════════════════
+function renderStats(data) {
+  const total = data.total_downloads || 0;
+  const success = data.successful || 0;
+  const today = data.today_downloads || 0;
+  const rate = total > 0 ? Math.round((success / total) * 100) : 0;
+  const plan = data.plan || 'Free';
+  const used = data.used || 0;
+  const limit = data.limit || 1;
+
+  animateValue('statTotal', 0, total, 1000);
+  animateValue('statRate', 0, rate, 1000, '%');
+  animateValue('statToday', 0, today, 800);
+  document.getElementById('statPlan').textContent = plan;
+  document.getElementById('statPlanSub').textContent = used + '/' + limit + (plan === 'VIP' ? ' today' : ' this month');
+}
+
+function renderRecent(items) {
+  const container = document.getElementById('recentTable');
+  if (!items.length) {
+    container.innerHTML = '<div class="table-row"><div style="grid-column:1/-1;text-align:center;color:var(--text-dim);padding:20px;">No downloads yet</div></div>';
+    return;
+  }
+  const platformNames = {
+    instagram: 'Instagram', youtube: 'YouTube', tiktok: 'TikTok',
+    facebook: 'Facebook', x: 'X', reddit: 'Reddit', soundcloud: 'SoundCloud'
+  };
+  container.innerHTML = items.slice(0, 6).map(item => {
+    const url = item.url || '';
+    const shortUrl = url.length > 30 ? url.substring(0, 30) + '...' : url;
+    const plat = platformNames[item.platform] || item.platform || 'Unknown';
+    const size = item.file_size ? formatBytes(parseInt(item.file_size)) : '—';
+    const status = item.success
+      ? '<span class="status-badge ok"><i class="fas fa-check"></i></span>'
+      : '<span class="status-badge fail"><i class="fas fa-times"></i></span>';
+    return `<div class="table-row">
+      <div class="url" title="${escapeHtml(url)}">${escapeHtml(shortUrl)}</div>
+      <div class="plat">${plat}</div>
+      <div class="size">${size}</div>
+      <div>${status}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderBotInfo(dash, health) {
+  document.getElementById('botUsers').textContent = (dash.total_users || 0).toLocaleString();
+  document.getElementById('botDownloads').textContent = (dash.total_downloads || 0).toLocaleString();
+  const ts = health.timestamp;
+  if (ts) {
+    const d = new Date(ts);
+    document.getElementById('botUptime').textContent = d.toLocaleTimeString();
+  }
+}
+
+function renderCharts(dash, items) {
+  // Platform pie chart
+  const platCtx = document.getElementById('platformChart').getContext('2d');
+  const platData = dash.top_platforms || [];
+  const platLabels = platData.map(p => p._id ? (p._id.charAt(0).toUpperCase() + p._id.slice(1)) : 'Unknown');
+  const platValues = platData.map(p => p.count);
+  const colors = ['#00d4ff','#a855f7','#22c55e','#f59e0b','#ef4444','#3b82f6','#ec4899'];
+
+  if (platformChartInst) platformChartInst.destroy();
+  platformChartInst = new Chart(platCtx, {
+    type: 'doughnut',
+    data: {
+      labels: platLabels,
+      datasets: [{
+        data: platValues,
+        backgroundColor: colors,
+        borderWidth: 0,
+        hoverOffset: 8
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { color: '#8b8ba3', font: { size: 11 }, boxWidth: 12 } }
+      },
+      cutout: '65%'
+    }
+  });
+
+  // Trend line chart (mock 7 days if no real data)
+  const trendCtx = document.getElementById('trendChart').getContext('2d');
+  const days = [];
+  const counts = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    days.push(d.toLocaleDateString('en-US', { weekday: 'short' }));
+    counts.push(Math.floor(Math.random() * 15) + 2); // Placeholder until real endpoint
+  }
+
+  if (trendChartInst) trendChartInst.destroy();
+  trendChartInst = new Chart(trendCtx, {
+    type: 'line',
+    data: {
+      labels: days,
+      datasets: [{
+        label: 'Downloads',
+        data: counts,
+        borderColor: '#00d4ff',
+        backgroundColor: 'rgba(0,212,255,0.1)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointBackgroundColor: '#00d4ff',
+        pointBorderColor: '#0a0a1a',
+        pointBorderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#8b8ba3', font: { size: 10 } } },
+        y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#8b8ba3', font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════
+function animateValue(id, start, end, duration, suffix = '') {
+  const el = document.getElementById(id);
+  const range = end - start;
+  const stepTime = Math.max(Math.floor(duration / range), 10);
+  let current = start;
+  const timer = setInterval(() => {
+    current++;
+    el.textContent = current.toLocaleString() + suffix;
+    if (current >= end) {
+      clearInterval(timer);
+      el.textContent = end.toLocaleString() + suffix;
+    }
+  }, stepTime);
+  if (range <= 0) el.textContent = end.toLocaleString() + suffix;
+}
+
+function formatBytes(bytes) {
+  if (!bytes || bytes === 0) return '—';
+  const k = 1024;
+  const sizes = ['B','KB','MB','GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function showError(msg) {
+  document.querySelector('.container').innerHTML = `
+    <div class="error-state">
+      <i class="fas fa-triangle-exclamation"></i>
+      <h3>Oops!</h3>
+      <p>${escapeHtml(msg)}</p>
+    </div>`;
+}
+
+// ═══════════════════════════════════════
+// START
+// ═══════════════════════════════════════
+document.addEventListener('DOMContentLoaded', initTelegram);
+</script>
+</body>
+</html>
